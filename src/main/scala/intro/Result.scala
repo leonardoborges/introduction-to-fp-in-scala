@@ -40,8 +40,11 @@ sealed trait Result[A] {
   def fold[X](
     fail: Error => X,
     ok: A => X
-  ): X =
-    ???
+  ): X = this match {
+    case Ok(v) => ok(v)
+    case Fail(e) => fail(e)
+  }
+
 
   /*
    * Exercise 2:
@@ -60,8 +63,10 @@ sealed trait Result[A] {
    *
    * Advanced: Try using flatMap.
    */
-  def map[B](f: A => B): Result[B] =
-    ???
+  def map[B](f: A => B): Result[B] = this match {
+    case Ok(v)    => Ok(f(v))
+    case Fail(e)  => Fail(e)
+  }
 
   /*
    * Exercise 3:
@@ -85,8 +90,11 @@ sealed trait Result[A] {
    *
    * Advanced: Try using fold.
    */
-  def flatMap[B](f: A => Result[B]): Result[B] =
-    ???
+  def flatMap[B](f: A => Result[B]): Result[B] = this match {
+    case Ok(v)    => f(v)
+    case Fail(e)  => Fail(e)
+  }
+
 
   /*
    * Exercise 4:
@@ -99,11 +107,14 @@ sealed trait Result[A] {
    * scala> Fail(NotEnoughInput).getOrElse(10)
    *  = 10
    */
-  def getOrElse(otherwise: => A): A =
-    ???
+  def getOrElse(otherwise: => A): A = this match {
+    case Ok(v)    => v
+    case _        => otherwise
+  }
+
 
   /*
-   * Exercise 5:
+   * Exercise 5: (ERRATA)
    *
    * Implement choice, take this result if successful otherwise take
    * the alternative.
@@ -120,8 +131,10 @@ sealed trait Result[A] {
    * scala> Fail[Int](NotEnoughInput) ||| Fail[Int](UnexpectedInput("?"))
    *  = Fail(NotEnoughInput)
    */
-  def |||(alternative: => Result[A]): Result[A] =
-    ???
+  def |||(alternative: => Result[A]): Result[A] = this match {
+    case Ok(_)    => this
+    case _        => alternative
+  }
 }
 
 object Result {
@@ -147,14 +160,15 @@ object Result {
    * Ok of a list of all the values or returning Fail on the first
    * Fail case.
    *
-   * scala> Lists.sequence(List[Result[Int]](Ok(1), Ok(2), Ok(3)))
+   * scala> Result.sequence(List[Result[Int]](Ok(1), Ok(2), Ok(3)))
    * resX: Result[List[Int]] = Ok(List(1, 2, 3))
    *
-   * scala> Lists.sequence(List[Result[Int]](Ok(1), Fail(NotEnoughInput), Ok(3)))
+   * scala> Result.sequence(List[Result[Int]](Ok(1), Fail(NotEnoughInput), Ok(3)))
    * resX: Result[List[Int]] = Fail(NotEnoughInput)
    */
-  def sequence[A](xs: List[Option[A]]): Option[List[A]] =
-    ???
+  def sequence[A](xs: List[Result[A]]): Result[List[A]] =
+    xs.foldRight(Ok(List()): Result[List[A]])((x,acc) =>
+      x.flatMap((a) => acc.map(as=> a :: as)))
 }
 
 
@@ -184,19 +198,30 @@ object ResultExample {
    *       if it is not a valid Int :| i.e. use try catch.
    */
   def int(body: String): Result[Int] =
-    ???
+    try {
+      Ok(body.toInt)
+    } catch {
+      case _: Exception => Fail(NotANumber(s"${body} is not a number"))
+    }
 
   /*
    * Parse the operation if it is valid, otherwise fail with InvalidOperation.
    */
-  def operation(op: String): Result[Operation] =
-    ???
+  def operation(op: String): Result[Operation] = op match {
+    case "+" => Ok(Plus)
+    case "-" => Ok(Minus)
+    case "*" => Ok(Multiply)
+    case _   => Fail(InvalidOperation(s"${op} isn't a valid operation"))
+  }
 
   /*
    * Compute an `answer`, by running operation for n and m.
    */
-  def calculate(op: Operation, n: Int, m: Int): Int =
-     ???
+  def calculate(op: Operation, n: Int, m: Int): Int = op match {
+    case Plus     => n + m
+    case Minus    => n - m
+    case Multiply => n * m
+  }
 
   /*
    * Attempt to compute an `answer`, by:
@@ -208,14 +233,27 @@ object ResultExample {
    * hint: use flatMap / map
    */
   def attempt(op: String, n: String, m: String): Result[Int] =
-     ???
+    operation(op).flatMap(
+      op1 => int(n).flatMap(
+        n1 => int(m).map(calculate(op1, n1, _))))
+
+
+  // def attempt(op: String, n: String, m: String): Result[Int] = for {
+  //   op1 <- operation(op)
+  //   n1  <- int(n)
+  //   m1  <- int(m)
+  // } yield calculate(op1, n1, m1)
+
 
   /*
    * Run a calculation by pattern matching three elements off the input arguments,
    * parsing the operation, a value for n and a value for m.
    */
-  def run(args: List[String]): Result[Int] =
-    ???
+  def run(args: List[String]): Result[Int] = args match {
+    case op :: n :: m :: Nil => attempt(op, n, m)
+    case _                   => Fail(NotEnoughInput)
+  }
+
 
   def main(args: Array[String]) =
     println(run(args.toList) match {
