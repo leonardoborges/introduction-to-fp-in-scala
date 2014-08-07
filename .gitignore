@@ -12,3 +12,5 @@ target
 /project/boot
 /.project
 /.classpath
+.ensime
+.ensime_cache

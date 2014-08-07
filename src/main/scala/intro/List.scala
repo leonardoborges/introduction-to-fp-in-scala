@@ -47,8 +47,11 @@ object Lists {
    * scala> Lists.length(List(1, 2, 3, 4))
    * resX: Int = 4
    */
-  def length[A](xs: List[A]): Int =
-    ???
+  def length[A](xs: List[A]): Int = xs match {
+    case Nil => 0
+    case x :: xs => 1 + length(xs)
+  }
+
 
   /*
    * Exercise 2:
@@ -59,7 +62,7 @@ object Lists {
    * resX: Int = 4
    */
   def lengthX[A](xs: List[A]): Int =
-    ???
+    xs.foldRight(0)((_, acc) => acc + 1)
 
   /*
    * Exercise 3:
@@ -70,7 +73,7 @@ object Lists {
    * resX: List[Int] = List(1, 2, 3, 4, 5, 6, 7, 8)
    */
   def append[A](x: List[A], y: List[A]): List[A] =
-    ???
+    x.foldRight(y)((x, acc) => x :: acc)
 
   /*
    * Exercise 4:
@@ -88,7 +91,7 @@ object Lists {
    *     not infer what you mean.
    */
   def map[A, B](xs: List[A])(f: A => B): List[B] =
-    ???
+    xs.foldRight(List[B]())((x, acc) => f(x) :: acc)
 
   /*
    * Exercise 5:
@@ -99,7 +102,7 @@ object Lists {
    * resX: List[Int] = List(1, 2)
    */
   def filter[A](xs: List[A])(p: A => Boolean): List[A] =
-    ???
+    xs.foldRight(List[A]())((x, acc) => if (p(x)) x :: acc else acc)
 
   /*
    * Exercise 6:
@@ -117,7 +120,7 @@ object Lists {
    *     not infer what you mean.
    */
   def reverse[A](xs: List[A]): List[A] =
-    ???
+    xs.foldLeft(List[A]())((acc, x) => x :: acc)
 
 
   /*
@@ -134,7 +137,14 @@ object Lists {
    * resX: Option[List[Int]] = None
    */
   def sequence[A](xs: List[Option[A]]): Option[List[A]] =
-    ???
+    xs.foldRight(Some(Nil): Option[List[A]])((x,acc) => for {
+      a  <- x
+      as <- acc
+    } yield a :: as)
+
+  // def sequence[A](xs: List[Option[A]]): Option[List[A]] =
+  //   xs.foldRight(Some(List()): Option[List[A]])((x,acc) =>
+  //     x.flatMap((a) => acc.map(as=> a :: as)))
 
   /*
    * *Challenge* Exercise 8:
@@ -158,6 +168,14 @@ object Lists {
    * ~~~ library hint: use can just use List[A]#sorted and/or List[A]#reverse to
    *     get the list in the correct order.   *
    */
-  def ranges(xs: List[Int]): List[(Int, Int)] =
-    ???
+  def ranges(xs: List[Int]): List[(Int, Int)] = {
+    val seed   = (0,Vector(Nil: List[Int]))
+    xs.sorted.sliding(2,1).foldLeft(seed)({
+      case ((idx, vec), a :: b :: Nil) => {
+        if (a == b || b == a + 1)
+          (idx, vec.updated(idx, a :: b :: vec(idx)))
+        else
+          (idx + 1, vec :+ (b :: Nil))
+      }})._2.map(xs => (xs.min, xs.max)).toList
+  }
 }
