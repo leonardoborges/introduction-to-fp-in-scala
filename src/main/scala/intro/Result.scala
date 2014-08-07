@@ -114,7 +114,7 @@ sealed trait Result[A] {
 
 
   /*
-   * Exercise 5: (ERRATA)
+   * Exercise 5:
    *
    * Implement choice, take this result if successful otherwise take
    * the alternative.
@@ -129,7 +129,7 @@ sealed trait Result[A] {
    *  = Ok(10)
    *
    * scala> Fail[Int](NotEnoughInput) ||| Fail[Int](UnexpectedInput("?"))
-   *  = Fail(NotEnoughInput)
+   *  = Fail(NotEnoughInput)  (ERRATA)
    */
   def |||(alternative: => Result[A]): Result[A] = this match {
     case Ok(_)    => this
@@ -154,7 +154,7 @@ object Result {
     Fail(error)
 
   /*
-   * *Challenge* Exercise 6:
+   * *Challenge* Exercise 6: (ERRATA) type sig was the one of list
    *
    * Sequence a list of Result into an Result of Lists by producing
    * Ok of a list of all the values or returning Fail on the first
