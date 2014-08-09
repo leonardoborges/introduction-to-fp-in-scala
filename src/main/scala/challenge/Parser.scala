@@ -19,7 +19,9 @@ case class Parser[A](run: String => Result[ParseState[A]]) {
    * output of that parser.
    */
   def map[B](f: A => B): Parser[B] =
-    ???
+    Parser(input => this.run(input).map({
+      case ParseState(input, value) => ParseState(input, f(value))
+    }))
 
   /**
    * Return a parser that feeds its input into this parser, and
@@ -31,7 +33,11 @@ case class Parser[A](run: String => Result[ParseState[A]]) {
    *   that error
    */
   def flatMap[B](f: A => Parser[B]): Parser[B] =
-    ???
+    Parser(input => this.run(input) match {
+      case Ok(ParseState(i,a)) => f(a).run(i)
+      case Fail(e)             => Fail(e)
+    })
+
 
   /**
    * Anonymous flatMap.
@@ -43,7 +49,7 @@ case class Parser[A](run: String => Result[ParseState[A]]) {
    * - if that parser fails with an error, return a parser with that error
    */
   def >>>[B](parser: => Parser[B]): Parser[B] =
-    ???
+    flatMap(_ => parser)
 
   /**
    * Choice.
@@ -55,7 +61,10 @@ case class Parser[A](run: String => Result[ParseState[A]]) {
    *  - if the second parser succeeds then try the second parser
    */
   def |||(f: => Parser[A]): Parser[A] =
-    ???
+    Parser(input => this.run(input) match {
+      case s@Ok(_) => s
+      case Fail(_) => f.run(input)
+    })
 }
 
 object Parser {
@@ -67,7 +76,7 @@ object Parser {
    *  = Ok(ParseState(hello, 5))
    */
   def value[A](a: A): Parser[A] =
-    ???
+    Parser(input => Ok(ParseState(input, a)))
 
   /**
    * Return a parser that always fails with the given Error.
@@ -77,7 +86,7 @@ object Parser {
    *
    */
   def failed[A](error: Error): Parser[A] =
-    ???
+    Parser(input => Fail(error))
 
   /**
    * Return a parser that succeeds with a character off the input
@@ -87,7 +96,10 @@ object Parser {
    *  = Ok(ParseState(ello, h))
    */
   def character: Parser[Char] =
-    ???
+    Parser(input => input.toList match {
+      case c :: cs => Ok(ParseState(cs.mkString, c))
+      case Nil     => Fail(NotEnoughInput)
+    })
 
   /**
    * Return a parser that continues producing a list of values from the
@@ -100,7 +112,15 @@ object Parser {
    *  = Ok(ParseState(,List()))
    */
   def list[A](parser: Parser[A]): Parser[List[A]] =
-    ???
+    Parser { input =>
+      def parse(cs:String, st: List[A]): (String, List[A]) = parser.run(cs) match {
+        case Ok(ParseState(c,s)) => parse(c, s :: st)
+        case Fail(_) => (cs, st)
+      }
+      parse(input, List()) match {
+        case (remaining, parsed) => Ok(ParseState(remaining, parsed.reverse))
+      }
+    }
 
   /**
    * Return a parser that produces at least one value from the
@@ -116,7 +136,30 @@ object Parser {
    *  = Fail(NotEnoughInput)
    */
   def list1[A](parser: Parser[A]): Parser[List[A]] =
-    ???
+    Parser { input =>
+      if (input.isEmpty)
+        Fail(NotEnoughInput)
+      else
+        (for {
+          parsed  <- parser
+          parsed1 <- list(parser)
+        } yield parsed :: parsed1).run(input)
+    }
+
+    //with double flatmap
+        // parser.flatMap(parsed => list(parser).flatMap(parsed1 => value(parsed :: parsed1))).run(input)
+
+
+  // with double run
+        // parser.run(input) match {
+        // case Ok(ParseState(remaining,parsed)) =>
+        //     list(parser).run(remaining) match {
+        //       case Ok(ParseState(remaining1,parsed1)) => Ok(ParseState(remaining1,parsed :: parsed1))
+        //     }
+        // case Fail(e) => Fail(e)
+        // }
+
+
 
   /**
    * Return a parser that produces a character but fails if
@@ -129,7 +172,16 @@ object Parser {
    *  = Ok(ParseState(ello,h))
    */
   def satisfy(pred: Char =>  Boolean): Parser[Char] =
-    ???
+    Parser { input =>
+      character.run(input) match {
+        case Ok(ParseState(i,c)) =>
+          if (pred(c))
+            Ok(ParseState(i,c))
+          else
+            Fail(UnexpectedInput(c.toString))
+        case f@Fail(_)           => f
+      }
+    }
 
   /**
    * Return a parser that produces a character but fails if
@@ -142,7 +194,7 @@ object Parser {
    *  = Ok(ParseState(ello,h))
    */
   def is(char: Char): Parser[Char] =
-    ???
+    satisfy(_ == char)
 
   /**
    * Return a parser that produces a character between '0' and '9'
@@ -159,7 +211,9 @@ object Parser {
    *  = Fail(UnexpectedInput(h))
    */
   def digit: Parser[Char] =
-    ???
+    satisfy(c => c.isDigit)
+
+
 
   /**
    * Return a parser that produces zero or a positive integer but fails if
@@ -175,7 +229,9 @@ object Parser {
    *  = Fail(UnexpectedInput(h))
    */
   def natural: Parser[Int] =
-    ???
+    Parser { input =>
+      list(digit).map(_.mkString.toInt).run(input)
+    }
 
   /**
    * Return a parser that produces a space character but fails if
