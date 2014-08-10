@@ -63,10 +63,12 @@ sealed trait Result[A] {
    *
    * Advanced: Try using flatMap.
    */
-  def map[B](f: A => B): Result[B] = this match {
-    case Ok(v)    => Ok(f(v))
-    case Fail(e)  => Fail(e)
-  }
+  def map[B](f: A => B): Result[B] =
+    flatMap(a => Ok(f(a)))
+    // this match {
+    //   case Ok(v)    => Ok(f(v))
+    //   case Fail(e)  => Fail(e)
+    // }
 
   /*
    * Exercise 3:
