@@ -7,9 +7,16 @@ package course
 object Scala {
 
   /* sbt & repl */
+  val name = "Leo"
+  val name: String = "Leo"
+
   println("hello")
 
   def double(n: Int) = n * 2
+  def double(n: Int): Int = n * 2
+
+  val square: Int => Int = n => n * n
+  val square = (n: Int) => n * n
 
   val numbers = List(1,2,3,4)
 
@@ -17,7 +24,22 @@ object Scala {
 
   numbers.foldRight(0)(_+_)
 
-  /* clases & objects */
+  numbers.map(square compose double)
+
+  /* classes & objects */
+  class SimpleClass {
+    def sayHello(name: String) =
+      println(s"hello ${name}")
+  }
+
+  new SimpleClass().sayHello("people")
+
+  object SimpleObject {
+    def sayHello(name: String) =
+      println(s"hello ${name}")
+  }
+
+  SimpleObject.sayHello("people")
 
   /* methods, values  */
 
@@ -59,6 +81,13 @@ object Scala {
   List(1,2,3,4) match {
     case x :: xs => x
     case _       => "error"
+  }
+
+  val n: Option[Int] = Some(1)
+
+  n match {
+    case Some(n) => n + 1
+    case None    => "error"
   }
 
   /* there is lots more, for comprehensions, implicits, laziness / call-by-name,
