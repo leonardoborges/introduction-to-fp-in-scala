@@ -137,10 +137,16 @@ object Lists {
    * resX: Option[List[Int]] = None
    */
   def sequence[A](xs: List[Option[A]]): Option[List[A]] =
-    xs.foldRight(Some(Nil): Option[List[A]])((x,acc) => for {
-      a  <- x
-      as <- acc
-    } yield a :: as)
+    xs.foldRight(Some(Nil): Option[List[A]])({
+      case (Some(x), Some(xs)) => Some(x :: xs)
+      case (Some(_), None)     => None
+      case (None,    _)        => None
+    })
+
+    // xs.foldRight(Some(Nil): Option[List[A]])((x,acc) => for {
+    //   a  <- x
+    //   as <- acc
+    // } yield a :: as)
 
   // def sequence[A](xs: List[Option[A]]): Option[List[A]] =
   //   xs.foldRight(Some(List()): Option[List[A]])((x,acc) =>
